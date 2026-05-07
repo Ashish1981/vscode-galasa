@@ -592,5 +592,9 @@
 		"@types/vscode": "^1.45.1",
 		"glob": "^7.1.6",
 		"typescript": "^5.4.0"
-	}
+	},
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Ashish1981/vscode-galasa.git"
+    }
 }
