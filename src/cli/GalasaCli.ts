@@ -41,19 +41,91 @@ export function getConfiguredCliPath(): string | undefined {
     return undefined;
 }
 
+/**
+ * Returns the directories searched (in order) for `galasactl` when the
+ * `galasa.cliPath` setting is empty and `PATH` lookup also fails.
+ *
+ * Order: configured `galasa.home`/bin → ~/.galasa/bin → ~/bin →
+ * /usr/local/bin → /usr/bin → /opt/galasa/bin →
+ * %LOCALAPPDATA%\Programs\galasactl → C:\Program Files\galasactl.
+ */
+export function getCliSearchDirs(): string[] {
+    const dirs: string[] = [];
+    const home = process.env.HOME || process.env.USERPROFILE || os.homedir();
+    const galasaHome = (vscode.workspace.getConfiguration('galasa').get<string>('home') || '').trim();
+    if (galasaHome) {
+        dirs.push(path.join(galasaHome, 'bin'));
+    }
+    if (home) {
+        dirs.push(path.join(home, '.galasa', 'bin'));
+        dirs.push(path.join(home, 'bin'));
+    }
+    if (os.platform() === 'win32') {
+        const localAppData = process.env.LOCALAPPDATA;
+        if (localAppData) {
+            dirs.push(path.join(localAppData, 'Programs', 'galasactl'));
+        }
+        const progFiles = process.env.ProgramFiles || process.env['ProgramFiles'];
+        if (progFiles) {
+            dirs.push(path.join(progFiles, 'galasactl'));
+        }
+    } else {
+        dirs.push('/usr/local/bin');
+        dirs.push('/usr/bin');
+        dirs.push('/opt/galasa/bin');
+    }
+    // De-dupe while preserving order
+    const seen = new Set<string>();
+    return dirs.filter(d => {
+        if (seen.has(d)) return false;
+        seen.add(d);
+        return true;
+    });
+}
+
+function findOnPath(exeName: string): string | undefined {
+    const pathEnv = process.env.PATH;
+    if (!pathEnv) return undefined;
+    const sep = os.platform() === 'win32' ? ';' : ':';
+    for (const dir of pathEnv.split(sep)) {
+        if (!dir) continue;
+        const candidate = path.join(dir, exeName);
+        if (fs.existsSync(candidate)) {
+            return candidate;
+        }
+    }
+    return undefined;
+}
+
 export function resolveCliExecutable(): string {
     const configured = getConfiguredCliPath();
+    const exeName = getCliExecutableName();
+
     if (configured) {
         if (fs.existsSync(configured)) {
             return configured;
         }
-        const expanded = path.join(configured, getCliExecutableName());
+        const expanded = path.join(configured, exeName);
         if (fs.existsSync(expanded)) {
             return expanded;
         }
         return configured;
     }
-    return getCliExecutableName();
+
+    const onPath = findOnPath(exeName);
+    if (onPath) {
+        return onPath;
+    }
+
+    for (const dir of getCliSearchDirs()) {
+        const candidate = path.join(dir, exeName);
+        if (fs.existsSync(candidate)) {
+            return candidate;
+        }
+    }
+
+    // Last resort — let spawn() try execvp on bare name.
+    return exeName;
 }
 
 export function getGalasaHome(): string {
@@ -148,19 +220,52 @@ function quoteArg(arg: string): string {
     return arg;
 }
 
+export function describeCliResolution(): string {
+    const exe = resolveCliExecutable();
+    const configured = getConfiguredCliPath();
+    const exeName = os.platform() === 'win32' ? 'galasactl.exe' : 'galasactl';
+    const lines: string[] = [];
+    lines.push(`Resolved galasactl path : ${exe}`);
+    lines.push(`Configured (galasa.cliPath) : ${configured ?? '(none)'}`);
+    lines.push(`PATH directories searched (first match wins):`);
+    const pathEnv = process.env.PATH || '';
+    const sep = os.platform() === 'win32' ? ';' : ':';
+    const pathDirs = pathEnv.split(sep).filter(Boolean);
+    for (const d of pathDirs) {
+        lines.push(`  - ${d}`);
+    }
+    lines.push(`Fallback directories searched after PATH:`);
+    for (const d of getCliSearchDirs()) {
+        lines.push(`  - ${d}`);
+    }
+    lines.push(`Looking for executable name: ${exeName}`);
+    return lines.join('\n');
+}
+
 export async function ensureCliAvailable(): Promise<boolean> {
     try {
         const result = await runGalasaCli(['--version']);
         if (result.code === 0) {
             return true;
         }
+        const channel = getOutputChannel();
+        channel.appendLine('[Galasa] galasactl could not be invoked.');
+        channel.appendLine(describeCliResolution());
+        if (result.stderr) channel.appendLine(result.stderr);
         const action = await vscode.window.showWarningMessage(
-            `galasactl is not available or returned an error (exit ${result.code}). ` +
-            `Please install the Galasa CLI and configure 'galasa.cliPath' if necessary.`,
-            'Open Settings'
+            `galasactl is not available (exit ${result.code}). ` +
+            `Set 'galasa.cliPath' to the absolute path of galasactl, or add its directory to PATH. ` +
+            `See the Galasa output channel for the full search list.`,
+            'Open Settings',
+            'Show Output',
+            'Run Diagnostics'
         );
         if (action === 'Open Settings') {
             vscode.commands.executeCommand('workbench.action.openSettings', 'galasa.cliPath');
+        } else if (action === 'Show Output') {
+            channel.show(true);
+        } else if (action === 'Run Diagnostics') {
+            vscode.commands.executeCommand('galasa.diagnostics');
         }
         return false;
     } catch (err) {

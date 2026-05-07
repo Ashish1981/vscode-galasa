@@ -8,17 +8,19 @@ export class EnvironmentProvider implements vscode.TreeDataProvider<GalasaEnviro
 
     constructor(galasaPath: string) {
         this.galasaPath = galasaPath;
-        this.configPath = path.join(galasaPath, "vscode", "envconfig");
-        if(!fs.existsSync(this.configPath)) {
-            fs.writeFileSync(this.configPath, "");
+        const vscodeDir = path.join(galasaPath, "vscode");
+        this.configPath = path.join(vscodeDir, "envconfig");
+        if (!fs.existsSync(vscodeDir)) {
+            try { fs.mkdirSync(vscodeDir, { recursive: true }); } catch { /* deferred until first use */ }
+        }
+        if (!fs.existsSync(this.configPath)) {
+            try {
+                fs.writeFileSync(this.configPath, "");
+            } catch { /* deferred — getChildren tolerates absence */ }
             this.envPath = undefined;
         } else {
             const content = fs.readFileSync(this.configPath).toString().trim();
-            if(content == "") {
-                this.envPath = undefined;
-            } else {
-                this.envPath = content;
-            }
+            this.envPath = content === "" ? undefined : content;
         }
     }
 
@@ -32,9 +34,13 @@ export class EnvironmentProvider implements vscode.TreeDataProvider<GalasaEnviro
 
     getChildren(element?: GalasaEnvironment): GalasaEnvironment[] | undefined {
         let items : GalasaEnvironment[] = [];
-        fs.readdirSync(path.join(this.galasaPath, "vscode")).forEach(file => {
+        const vscodeDir = path.join(this.galasaPath, "vscode");
+        if (!fs.existsSync(vscodeDir)) {
+            return items;
+        }
+        fs.readdirSync(vscodeDir).forEach(file => {
             if(file.endsWith(".galenv")) {
-                const filePath = path.join(this.galasaPath, "vscode", file);
+                const filePath = path.join(vscodeDir, file);
                 const name = fs.readFileSync(filePath).toString().split(/\r?\n/)[0].substring(1).trim();
                 if(this.envPath == filePath) {
                     items.push(new GalasaEnvironment(name + " - Active", filePath, vscode.TreeItemCollapsibleState.None));

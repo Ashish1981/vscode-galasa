@@ -16,14 +16,13 @@ import { addEnvrionment, deleteEnvironment } from './local/EnvironmentController
 import { setupWorkspace } from './config/setup';
 import { detectJava, describeJava, isVersionSupported, MAX_SUPPORTED_JAVA, MIN_SUPPORTED_JAVA, showUnsupportedJavaWarning, JavaVersionError } from './utils/JavaVersion';
 import { registerAllGalasaCliCommands } from './cli/commands';
-import { getOutputChannel } from './cli/GalasaCli';
+import { getGalasaHome, getOutputChannel } from './cli/GalasaCli';
 import { runDiagnostics } from './utils/diagnostics';
 import { ensureStatusBar, refreshStatusBar } from './utils/statusBar';
 
-const galasaPath = path.join(process.env.USERPROFILE ? process.env.USERPROFILE : "", process.env.HOME ? process.env.HOME : "", ".galasa");
-
 export function activate(context: vscode.ExtensionContext) {
 
+    const galasaPath = getGalasaHome();
     setupWorkspace(context, galasaPath);
     validateJavaOnActivation();
     registerAllGalasaCliCommands(context);
