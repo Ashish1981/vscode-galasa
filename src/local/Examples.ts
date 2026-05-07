@@ -40,18 +40,42 @@ function getExampleConfig(): ExampleConfig | undefined {
     };
 }
 
-export function launchSimbank(context : vscode.ExtensionContext) {
+const GALASA_RELEASES_URL = "https://github.com/galasa-dev/galasa/releases";
+const SIMBANK_DOCS_URL = "https://galasa.dev/docs/running-simbank-tests/simbank-IVT";
+
+async function offerSettingsAndDocs(message: string, settingKey: string, docsUrl: string): Promise<void> {
+    const action = await vscode.window.showErrorMessage(
+        message,
+        "Open Settings",
+        "Download Galasa",
+        "Open Docs"
+    );
+    if (action === "Open Settings") {
+        vscode.commands.executeCommand("workbench.action.openSettings", settingKey);
+    } else if (action === "Download Galasa") {
+        vscode.env.openExternal(vscode.Uri.parse(GALASA_RELEASES_URL));
+    } else if (action === "Open Docs") {
+        vscode.env.openExternal(vscode.Uri.parse(docsUrl));
+    }
+}
+
+export async function launchSimbank(context : vscode.ExtensionContext) {
     const simbank = getSimbankConfig();
     if (!simbank) {
-        vscode.window.showErrorMessage(
-            "Cannot launch Simbank: 'galasa.simbankJarPath' is not configured. " +
-            "Set it to the path of your Simbank distribution jar."
+        await offerSettingsAndDocs(
+            "Cannot launch Simbank: 'galasa.simbankJarPath' is not set. " +
+            "Download galasa-simplatform-<version>.jar from the Galasa releases, then point this setting at it.",
+            "galasa.simbankJarPath",
+            SIMBANK_DOCS_URL
         );
         return;
     }
     if (!fs.existsSync(simbank.jarPath)) {
-        vscode.window.showErrorMessage(
-            `Cannot launch Simbank: '${simbank.jarPath}' does not exist.`
+        await offerSettingsAndDocs(
+            `Cannot launch Simbank: '${simbank.jarPath}' does not exist. ` +
+            "Update 'galasa.simbankJarPath' or download the jar.",
+            "galasa.simbankJarPath",
+            SIMBANK_DOCS_URL
         );
         return;
     }
@@ -92,8 +116,12 @@ function quoteIfNeeded(value: string): string {
 export async function createExampleFiles(context : vscode.ExtensionContext) {
     const config = getExampleConfig();
     if (!config) {
-        vscode.window.showErrorMessage(
-            "Cannot create examples: 'galasa.examplesArchivePath' and 'galasa.examplePackagePrefix' must be configured."
+        await offerSettingsAndDocs(
+            "Cannot create SimBank examples: 'galasa.examplesArchivePath' and 'galasa.examplePackagePrefix' must be set. " +
+            "Download galasa-simbank-tests-<version>.zip from the Galasa releases, point galasa.examplesArchivePath at it, " +
+            "and set galasa.examplePackagePrefix to e.g. 'dev.galasa.simbank'.",
+            "galasa.examplesArchivePath",
+            SIMBANK_DOCS_URL
         );
         return;
     }

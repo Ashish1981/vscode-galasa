@@ -339,116 +339,185 @@
 				"contents": "No local Galasa runs yet.\n[Initialize Galasa Home](command:galasa.local.init)\n[Submit Local Run](command:galasa.runs.submitLocal)\n[Run Diagnostics](command:galasa.diagnostics)"
 			}
 		],
-		"configuration": {
-			"title": "Galasa",
-			"properties": {
-				"galasa.maven-remote": {
-					"type": "string",
-					"default": "https://repo.maven.apache.org/maven2/",
-					"description": "%galasavscode.config.galasa.maven-remote%"
-				},
-				"galasa.maven-local": {
-					"type": "string",
-					"default": "",
-					"description": "%galasavscode.config.galasa.maven-local%"
-				},
-				"galasa.version": {
-					"type": "string",
-					"default": "LATEST",
-					"description": "%galasavscode.config.galasa.version%"
-				},
-				"galasa.requestor": {
-					"type": "string",
-					"default": "unknown"
-				},
-				"galasa.overrides": {
-					"type": "boolean",
-					"default": true
-				},
-				"galasa.javaHome": {
-					"type": "string",
-					"default": "",
-					"description": "Path to a JDK installation (Java 8-26 supported). Falls back to java.home, JAVA_HOME, then PATH."
-				},
-				"galasa.cliPath": {
-					"type": "string",
-					"default": "",
-					"description": "Path to the galasactl executable. If empty, the extension uses the executable on PATH."
-				},
-				"galasa.home": {
-					"type": "string",
-					"default": "",
-					"description": "Override for GALASA_HOME. If empty, defaults to ~/.galasa or the GALASA_HOME environment variable."
-				},
-				"galasa.bootstrap": {
-					"type": "string",
-					"default": "",
-					"description": "Reference (file:// URL or HTTPS URL) to the bootstrap.properties used by the Galasa ecosystem."
-				},
-				"galasa.bootJarPath": {
-					"type": "string",
-					"default": "",
-					"description": "Absolute path to the Galasa boot jar containing the launcher main class."
-				},
-				"galasa.bootLauncherMainClass": {
-					"type": "string",
-					"default": "",
-					"description": "Fully-qualified main class used to launch a debug session (e.g. dev.galasa.boot.Launcher)."
-				},
-				"galasa.uberObr": {
-					"type": "string",
-					"default": "",
-					"description": "Maven coordinates (mvn:group/artifact/version/obr) of the uber OBR to load when launching a test."
-				},
-				"galasa.testAnnotation": {
-					"type": "string",
-					"default": "@Test",
-					"description": "Annotation that marks a Galasa test method in Java sources."
-				},
-				"galasa.testAnnotationImport": {
-					"type": "string",
-					"default": "",
-					"description": "Optional fully-qualified import that must be present alongside the test annotation. Leave empty to skip the import check."
-				},
-				"galasa.simbankJarPath": {
-					"type": "string",
-					"default": "",
-					"description": "Absolute path to the Simbank distribution jar. Required to launch Simbank from the extension."
-				},
-				"galasa.examplesArchivePath": {
-					"type": "string",
-					"default": "",
-					"description": "Absolute path to a zip archive containing example projects."
-				},
-				"galasa.examplePackagePrefix": {
-					"type": "string",
-					"default": "",
-					"description": "Java package prefix used in the bundled examples. New project names will reuse this prefix when scaffolding."
-				},
-				"galasa.exampleSubdirectories": {
-					"type": "array",
-					"items": {
-						"type": "string"
+		"configuration": [
+			{
+				"title": "Galasa: Runtime",
+				"order": 1,
+				"properties": {
+					"galasa.javaHome": {
+						"type": "string",
+						"default": "",
+						"scope": "machine-overridable",
+						"order": 1,
+						"markdownDescription": "Path to a JDK installation directory (Java **8 - 26** supported).\n\n- The extension also tries `#java.home#`, `JAVA_HOME`, then `PATH`.\n- Example: `/opt/jdk-21` or `C:\\Program Files\\Eclipse Adoptium\\jdk-21`."
 					},
-					"default": [
-						"manager",
-						"tests"
-					],
-					"description": "Subdirectory suffixes (e.g. 'manager', 'tests') generated for each example project."
-				},
-				"galasa.examplePomPlaceholder": {
-					"type": "string",
-					"default": "%%prefix%%",
-					"description": "Token replaced in pom-example.xml when scaffolding examples."
-				},
-				"galasa.cliTimeoutMs": {
-					"type": "number",
-					"default": 120000,
-					"minimum": 1000,
-					"description": "Timeout (in milliseconds) for non-interactive galasactl invocations. Set to 0 to disable timeout."
+					"galasa.cliPath": {
+						"type": "string",
+						"default": "",
+						"scope": "machine-overridable",
+						"order": 2,
+						"markdownDescription": "Absolute path to the **galasactl** executable, or its containing directory.\n\n- If empty, the extension searches `PATH`, then `~/.galasa/bin`, `/usr/local/bin`, `/usr/bin`, `/opt/galasa/bin` (POSIX) or `%LOCALAPPDATA%\\Programs\\galasactl`, `%ProgramFiles%\\galasactl` (Windows).\n- Install via [Galasa CLI release](https://github.com/galasa-dev/galasa/releases) or `brew install galasa-dev/tap/galasactl`."
+					},
+					"galasa.cliTimeoutMs": {
+						"type": "number",
+						"default": 120000,
+						"minimum": 0,
+						"scope": "window",
+						"order": 3,
+						"markdownDescription": "Timeout (milliseconds) for non-interactive `galasactl` invocations. Set `0` to disable.\n\n- Times out → exit code `-2` and a `Timed out after Nms` line appended to stderr.\n- Increase to `300000` for slow ecosystems / long IPL-driven Z-host calls."
+					},
+					"galasa.home": {
+						"type": "string",
+						"default": "",
+						"scope": "machine-overridable",
+						"order": 4,
+						"markdownDescription": "Override for **GALASA_HOME** — the directory holding `bootstrap.properties`, `overrides.properties`, `credentials.properties`, the local RAS, and named environments.\n\n- If empty, defaults to the `GALASA_HOME` environment variable, else `~/.galasa`.\n- The extension creates this directory if missing on activation."
+					}
+				}
+			},
+			{
+				"title": "Galasa: Ecosystem",
+				"order": 2,
+				"properties": {
+					"galasa.bootstrap": {
+						"type": "string",
+						"default": "",
+						"scope": "window",
+						"order": 1,
+						"markdownDescription": "Reference to the **bootstrap.properties** of your Galasa ecosystem.\n\n- `file:///home/me/.galasa/bootstrap.properties`\n- `https://galasa.example.com/api/bootstrap`\n\nIf empty, falls back to the `GALASA_BOOTSTRAP` env var, then `file://${galasa.home}/bootstrap.properties`."
+					},
+					"galasa.requestor": {
+						"type": "string",
+						"default": "unknown",
+						"scope": "window",
+						"order": 2,
+						"markdownDescription": "Value injected as `framework.run.requestor` for every locally-launched run. Appears as the requestor in the RAS.\n\n- Use your e-mail or RACF / AD username (e.g. `alice@example.com` or `TSOUSER@PLEX1`).\n- Avoid putting secrets here — it is recorded verbatim in run history."
+					},
+					"galasa.overrides": {
+						"type": "boolean",
+						"default": true,
+						"scope": "window",
+						"order": 3,
+						"markdownDescription": "When `true`, contents of `${galasa.home}/overrides.properties` are merged into the per-run override file before each local debug session.\n\n- Disable to launch with a clean override set."
+					}
+				}
+			},
+			{
+				"title": "Galasa: Maven & Versions",
+				"order": 3,
+				"properties": {
+					"galasa.maven-remote": {
+						"type": "string",
+						"default": "https://repo.maven.apache.org/maven2/",
+						"scope": "window",
+						"order": 1,
+						"markdownDescription": "Public Maven repository used to resolve Galasa managers and test dependencies.\n\n- Behind a corporate firewall, set this to your Artifactory / Nexus URL (e.g. `https://artifactory.example.com/maven-public`)."
+					},
+					"galasa.maven-local": {
+						"type": "string",
+						"default": "",
+						"scope": "machine-overridable",
+						"order": 2,
+						"markdownDescription": "Local file-system Maven cache consulted **before** the remote repository.\n\n- Useful for air-gapped environments. Example: `/home/me/.m2/repository`."
+					},
+					"galasa.version": {
+						"type": "string",
+						"default": "LATEST",
+						"scope": "window",
+						"order": 3,
+						"markdownDescription": "Galasa framework version to embed when building a per-run uber OBR.\n\n- `LATEST` uses the extension's `symbolicversion`.\n- Otherwise pin to e.g. `0.42.0`.",
+						"examples": ["LATEST", "0.42.0"]
+					}
+				}
+			},
+			{
+				"title": "Galasa: Local Debug Launcher",
+				"order": 4,
+				"properties": {
+					"galasa.bootJarPath": {
+						"type": "string",
+						"default": "",
+						"scope": "machine-overridable",
+						"order": 1,
+						"markdownDescription": "**Required for local debug.** Absolute path to the Galasa boot jar containing the launcher main class.\n\n- Example: `/opt/galasa/0.42.0/galasa-boot-0.42.0.jar`\n- Download from the [Galasa releases page](https://github.com/galasa-dev/galasa/releases)."
+					},
+					"galasa.bootLauncherMainClass": {
+						"type": "string",
+						"default": "",
+						"scope": "machine-overridable",
+						"order": 2,
+						"markdownDescription": "**Required for local debug.** Fully-qualified main class inside the boot jar.\n\n- Standard value: `dev.galasa.boot.Launcher`",
+						"examples": ["dev.galasa.boot.Launcher"]
+					},
+					"galasa.uberObr": {
+						"type": "string",
+						"default": "",
+						"scope": "window",
+						"order": 3,
+						"markdownDescription": "Optional Maven coordinate of an **uber OBR** (Galasa managers bundle) to load before the per-workspace OBR.\n\n- Format: `mvn:group/artifact/version/obr`\n- Example: `mvn:dev.galasa/dev.galasa.uber.obr/0.42.0/obr`\n- Leave empty to use only the workspace-built OBR.",
+						"pattern": "^$|^mvn:[^/]+/[^/]+/[^/]+/obr$",
+						"patternErrorMessage": "Must be empty or of the form mvn:group/artifact/version/obr"
+					},
+					"galasa.testAnnotation": {
+						"type": "string",
+						"default": "@Test",
+						"scope": "window",
+						"order": 4,
+						"markdownDescription": "Annotation that marks a Galasa test method in Java sources.\n\n- Default `@Test` (matches Galasa's `dev.galasa.Test`).\n- Change if your team uses a custom annotation alias."
+					},
+					"galasa.testAnnotationImport": {
+						"type": "string",
+						"default": "",
+						"scope": "window",
+						"order": 5,
+						"markdownDescription": "Optional fully-qualified import that must be present alongside `#galasa.testAnnotation#`.\n\n- Example: `dev.galasa.Test`\n- Leave empty to skip the import check (annotation alone suffices)."
+					}
+				}
+			},
+			{
+				"title": "Galasa: SimBank & Examples",
+				"order": 5,
+				"properties": {
+					"galasa.simbankJarPath": {
+						"type": "string",
+						"default": "",
+						"scope": "machine-overridable",
+						"order": 1,
+						"markdownDescription": "Absolute path to the **SimBank distribution jar**. Required for `Galasa: Launch Simbank`.\n\n- Download `galasa-simplatform-<version>.jar` from the [Galasa releases page](https://github.com/galasa-dev/galasa/releases) (look under `modules/simplatform/galasa-simplatform-<ver>/`).\n- Example: `/opt/galasa/0.42.0/galasa-simplatform-0.42.0.jar`."
+					},
+					"galasa.examplesArchivePath": {
+						"type": "string",
+						"default": "",
+						"scope": "machine-overridable",
+						"order": 2,
+						"markdownDescription": "Absolute path to a **zip archive** containing example projects (e.g. SimBank tests).\n\n- Download `galasa-simbank-tests-<version>.zip` from the [Galasa releases page](https://github.com/galasa-dev/galasa/releases).\n- Example: `/opt/galasa/0.42.0/galasa-simbank-tests-0.42.0.zip`."
+					},
+					"galasa.examplePackagePrefix": {
+						"type": "string",
+						"default": "",
+						"scope": "window",
+						"order": 3,
+						"markdownDescription": "Java package prefix used in the bundled examples. New project names reuse this prefix when scaffolding.\n\n- For SimBank: `dev.galasa.simbank`\n- For your own examples archive: match the prefix of the example project folders inside the zip.",
+						"examples": ["dev.galasa.simbank"]
+					},
+					"galasa.exampleSubdirectories": {
+						"type": "array",
+						"items": { "type": "string" },
+						"default": ["manager", "tests"],
+						"scope": "window",
+						"order": 4,
+						"markdownDescription": "Subdirectory suffixes generated for each example project.\n\n- For SimBank: `[\"manager\", \"tests\"]` produces `<prefix>.manager` and `<prefix>.tests` projects."
+					},
+					"galasa.examplePomPlaceholder": {
+						"type": "string",
+						"default": "%%prefix%%",
+						"scope": "window",
+						"order": 5,
+						"markdownDescription": "Token in `pom-example.xml` replaced with the user-chosen package name during scaffolding.\n\n- Default: `%%prefix%%` (matches Galasa SimBank archives)."
+					}
 				}
 			}
-		},
+		],
 		"menus": {
 			"view/title": [
 				{

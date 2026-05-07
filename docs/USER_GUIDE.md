@@ -17,6 +17,7 @@ This is the complete reference for the Galasa Visual Studio Code extension: ever
 7. [Status bar and Diagnostics](#7-status-bar-and-diagnostics)
 8. [Authoring and debugging tests locally](#8-authoring-and-debugging-tests-locally)
 9. [Working with the local Galasa home (`~/.galasa`)](#9-local-galasa-home)
+9b. [**Writing real tests using properties files**](#9b-writing-real-tests-using-properties-files) ← start here for SimBank / Z / Docker recipes
 10. [Connecting to a remote ecosystem](#10-connecting-to-an-ecosystem)
 11. [Z host (mainframe) workflows](#11-z-host-workflows)
 12. [Non-Z host (distributed) workflows](#12-non-z-host-workflows)
@@ -284,6 +285,173 @@ The extension treats `~/.galasa` (or `galasa.home`) as the source of truth for:
 
 ---
 
+## 9b. Writing real tests using properties files
+
+Galasa tests are configured **entirely** through Java-style `.properties` files. The extension touches the following four files; understanding which goes where is the difference between a test that runs on someone else's laptop and one that doesn't.
+
+### 9b.1 The four properties files
+
+| File | Path | What goes in it | Lifetime |
+|------|------|-----------------|----------|
+| **bootstrap.properties** | `${galasa.home}/bootstrap.properties` (or set via `galasa.bootstrap`) | Where the framework finds the CPS, RAS, credentials store. | Edit once per environment. |
+| **cps.properties** | `${galasa.home}/cps.properties` | The Configuration Property Store: per-manager configuration keys (zos image names, Docker engines, Selenium grid endpoints, …). | Edit per project + per target. |
+| **overrides.properties** | `${galasa.home}/overrides.properties` (merged when `galasa.overrides=true`) | One-off overrides applied on top of CPS for a single run / debug session. | Edit when you need to redirect a single run to a different host. |
+| **credentials.properties** | `${galasa.home}/credentials.properties` | Plain-text usernames / passwords / tokens referenced by `secure.credentials.<id>.username/password`. | File-mode `600`. Never commit. |
+
+The extension also lets you maintain **named environment files** under `${galasa.home}/vscode/<name>.galenv` (managed via the **Environment Properties** sidebar). The currently active one is merged into the per-run overrides on every local debug launch — so you can keep separate `dev`, `staging`, `prod` property sets and toggle between them with one click.
+
+### 9b.2 Anatomy of a CPS key
+
+CPS keys follow the convention:
+
+```
+<namespace>.<scope>.<id>.<key> = <value>
+```
+
+| Part | Meaning |
+|------|---------|
+| `namespace` | The manager (e.g. `zos`, `zos3270`, `cics`, `docker`, `selenium`, `http`, `framework`). |
+| `scope` | A discriminator the manager understands. For zOS: `cluster` / `image` / `sysplex`. For docker: `engine`. |
+| `id` | Your team's name for that scope (e.g. `PLEX1`, `MV2A`, `LOCAL`). |
+| `key` | Manager-defined property (`hostname`, `port`, `default.hostname`, `images`, etc.). |
+
+The exact keys per manager are in the [Galasa managers reference](https://github.com/galasa-dev/galasa/tree/main/modules/managers).
+
+### 9b.3 Recipe — z/OS test against a real LPAR
+
+`~/.galasa/cps.properties`:
+
+```properties
+# Cluster definition
+zos.cluster.PLEX1.images=MV2A,MV2B
+
+# Image MV2A
+zos.image.MV2A.default.hostname=mv2a.example.com
+zos.image.MV2A.ipv4.hostname=mv2a.example.com
+zos.image.MV2A.zosmf.server=MV2A
+zos.image.MV2A.credentials=MV2A
+zos.image.MV2A.sysname=MV2A
+
+# z/OSMF
+zosmf.server.MV2A.images=MV2A
+zosmf.server.MV2A.https=true
+zosmf.server.MV2A.port=443
+
+# 3270
+zos3270.tls=true
+zos3270.image.MV2A.host=mv2a.example.com
+zos3270.image.MV2A.port=23
+```
+
+`~/.galasa/credentials.properties` (file-mode `600`):
+
+```properties
+secure.credentials.MV2A.username=TSOUSER
+secure.credentials.MV2A.password=changeit
+```
+
+In the test class:
+
+```java
+@Test
+public class MyZosTest {
+    @ZosImage(imageTag = "PRIMARY")
+    public IZosImage primary;
+
+    @Test
+    public void itLogsOn() throws Exception {
+        // primary is now bound to MV2A through the CPS keys above.
+    }
+}
+```
+
+`~/.galasa/overrides.properties` — pin which image gets resolved for tag `PRIMARY` for **this** run only:
+
+```properties
+zos.image.IMAGE_TAG_PRIMARY=MV2A
+```
+
+### 9b.4 Recipe — local Docker target
+
+`~/.galasa/cps.properties`:
+
+```properties
+docker.engines=LOCAL
+docker.engine.LOCAL.hostname=localhost
+docker.engine.LOCAL.port=2375
+docker.engine.LOCAL.tls.enabled=false
+```
+
+In the test class:
+
+```java
+@DockerContainer(image = "nginx:latest", containerTag = "WEB")
+public IDockerContainer web;
+```
+
+### 9b.5 Recipe — Selenium WebDriver against a Grid
+
+`~/.galasa/cps.properties`:
+
+```properties
+selenium.grid.endpoint=https://selenium-grid.example.com
+selenium.driver.type=chrome
+selenium.driver.chrome.maxConnections=2
+```
+
+`~/.galasa/credentials.properties`:
+
+```properties
+secure.credentials.SELENIUM.token=eyJhbGciOi...
+```
+
+### 9b.6 Recipe — generic HTTP target
+
+`~/.galasa/cps.properties`:
+
+```properties
+http.endpoint.MYAPI.url=https://api.example.com
+http.endpoint.MYAPI.credentials=MYAPI
+```
+
+`~/.galasa/credentials.properties`:
+
+```properties
+secure.credentials.MYAPI.username=svc-account
+secure.credentials.MYAPI.password=...
+```
+
+### 9b.7 Switching between environments per debug session
+
+1. Open the **Galasa** activity bar → **Environment Properties** view.
+2. Click **+** (Add Environment) → name it `dev` / `staging` / `prod`.
+3. Edit the resulting file under `${galasa.home}/vscode/<name>.galenv` — populate it with overrides like:
+   ```properties
+   # dev
+   zos.image.IMAGE_TAG_PRIMARY=MV2A
+   docker.engine.LOCAL.hostname=docker-dev.example.com
+   ```
+4. Right-click the environment in the sidebar → **Set Active**.
+5. Press the **Debug Galasa test locally** code-lens. The active environment's properties are merged into the generated overrides file before the launcher boots.
+
+### 9b.8 Where to put which key — quick rule
+
+| If the key… | Put it in |
+|-------------|-----------|
+| Describes the **target system** (host, port, manager defaults) | `cps.properties` |
+| Is a **secret** | `credentials.properties` |
+| Is a **per-run override** (e.g. point this one run at a different image) | `overrides.properties` |
+| Should toggle with the active sidebar environment (dev/staging/prod) | `${galasa.home}/vscode/<name>.galenv` |
+| Tells the framework where to find its CPS / RAS / credentials store | `bootstrap.properties` |
+
+### 9b.9 Editing tips inside VS Code
+
+- The extension contributes the **galenv** language and snippets to `.galenv` files — open one and start typing to see suggested CPS keys.
+- Use **Galasa: Properties - Set** (`galasa.properties.set`) when you want a property to live in the *ecosystem* CPS rather than your local `cps.properties`.
+- Use **Galasa: Secrets - Set** (`galasa.secrets.set`) for ecosystem-side secrets — never push `credentials.properties` to the ecosystem.
+
+---
+
 ## 10. Connecting to an ecosystem
 
 A Galasa "ecosystem" is the deployed server-side: API, RAS, CPS store and resource controllers (typically on Kubernetes — see [galasa-dev/helm](https://github.com/galasa-dev/helm)).
@@ -361,11 +529,40 @@ When tests run against IBM Z (z/OS), Galasa drives them through the `zos`, `zos3
 
 [SimBank](https://github.com/galasa-dev/simplatform) is a JVM-hosted simulation of CICS terminals + a bank application. It is the canonical Z-style target you can run on a laptop.
 
-1. Set `galasa.simbankJarPath` to the SimBank jar.
-2. Set `galasa.examplesArchivePath` and `galasa.examplePackagePrefix` to the SimBank examples bundle and prefix.
-3. Run **Create SimBank Examples** (`galasa-test.createExamples`) → choose a package name. The extension extracts the example projects into your workspace.
-4. Run **Launch Simbank** (`galasa-test.simbank`) → opens a terminal running the SimBank jar with the appropriate `--add-opens` flags for your JDK.
-5. Open one of the generated SimBank tests and click **Debug Galasa test locally**.
+#### 11.1.a Acquire the artifacts
+
+The extension does **not** ship the SimBank jar or the examples archive — they are released alongside Galasa itself. To download them:
+
+1. Visit the [Galasa releases page](https://github.com/galasa-dev/galasa/releases).
+2. Pick a version (e.g. `0.42.0`).
+3. From the `modules/simplatform/` and `modules/simplatform-tests/` assets, download:
+   - `galasa-simplatform-<version>.jar`
+   - `galasa-simbank-tests-<version>.zip`
+4. Move them somewhere stable, e.g.:
+   - Linux/macOS: `/opt/galasa/<version>/`
+   - Windows: `C:\Program Files\galasa\<version>\`
+
+#### 11.1.b Tell the extension where they are
+
+Open VS Code Settings (`Ctrl+,`) → search **"galasa simbank"** → fill in:
+
+| Setting | Example value |
+|---------|---------------|
+| `galasa.simbankJarPath` | `/opt/galasa/0.42.0/galasa-simplatform-0.42.0.jar` |
+| `galasa.examplesArchivePath` | `/opt/galasa/0.42.0/galasa-simbank-tests-0.42.0.zip` |
+| `galasa.examplePackagePrefix` | `dev.galasa.simbank` |
+| `galasa.bootJarPath` | `/opt/galasa/0.42.0/galasa-boot-0.42.0.jar` |
+| `galasa.bootLauncherMainClass` | `dev.galasa.boot.Launcher` |
+| `galasa.uberObr` | `mvn:dev.galasa/dev.galasa.uber.obr/0.42.0/obr` |
+
+> The error notifications **Cannot create examples…** and **Cannot launch Simbank…** include direct **Open Settings** and **Download Galasa** buttons that take you straight to the right place.
+
+#### 11.1.c Run it
+
+1. Run **Create SimBank Examples** (`galasa-test.createExamples`) → enter a package name (or accept the default `dev.galasa.simbank`). The extension extracts the example projects into your workspace.
+2. Run **Launch Simbank** (`galasa-test.simbank`) → opens a terminal running the SimBank jar with the appropriate `--add-opens` flags for your JDK.
+3. Open one of the generated SimBank tests (e.g. `BasicAccountCreditTest.java`) and click **Debug Galasa test locally** in the editor title bar (or the CodeLens above the class).
+4. Watch the **Local Runs** sidebar populate when the run finishes. Right-click the new run → **Run Log** to inspect.
 
 ### 11.2 Connecting to a real z/OS LPAR
 

@@ -12,3 +12,7 @@ galasa-workspace
 .DS_Store
 .scannerwork
 dist/
+out-test/
+test/**/*.js
+test/**/*.js.map
+test/**/*.d.ts

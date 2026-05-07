@@ -9,10 +9,13 @@ export interface StubState {
     inputBoxQueue: (string | undefined)[];
     quickPickQueue: (string | undefined)[];
     warningResponses: (string | undefined)[];
+    errorResponses: (string | undefined)[];
     showInformationMessageCalls: any[];
     showErrorMessageCalls: any[];
     showWarningMessageCalls: any[];
     registeredCommands: Record<string, (...args: any[]) => any>;
+    executedCommands: { name: string; args: any[] }[];
+    openedUris: string[];
     output: { lines: string[]; shown: boolean };
 }
 
@@ -21,10 +24,13 @@ export const state: StubState = {
     inputBoxQueue: [],
     quickPickQueue: [],
     warningResponses: [],
+    errorResponses: [],
     showInformationMessageCalls: [],
     showErrorMessageCalls: [],
     showWarningMessageCalls: [],
     registeredCommands: {},
+    executedCommands: [],
+    openedUris: [],
     output: { lines: [], shown: false },
 };
 
@@ -33,10 +39,13 @@ export function resetState(): void {
     state.inputBoxQueue = [];
     state.quickPickQueue = [];
     state.warningResponses = [];
+    state.errorResponses = [];
     state.showInformationMessageCalls = [];
     state.showErrorMessageCalls = [];
     state.showWarningMessageCalls = [];
     state.registeredCommands = {};
+    state.executedCommands = [];
+    state.openedUris = [];
     state.output = { lines: [], shown: false };
 }
 
@@ -101,7 +110,8 @@ const vscodeStub: any = {
         },
         showErrorMessage(...args: any[]): Promise<string | undefined> {
             state.showErrorMessageCalls.push(args);
-            return Promise.resolve(undefined);
+            const value = state.errorResponses.length > 0 ? state.errorResponses.shift() : undefined;
+            return Promise.resolve(value);
         },
         showWarningMessage(...args: any[]): Promise<string | undefined> {
             state.showWarningMessageCalls.push(args);
@@ -138,7 +148,17 @@ const vscodeStub: any = {
             state.registeredCommands[name] = handler;
             return { dispose() { delete state.registeredCommands[name]; } };
         },
-        executeCommand: () => Promise.resolve(),
+        executeCommand(name: string, ...args: any[]) {
+            state.executedCommands.push({ name, args });
+            return Promise.resolve();
+        },
+    },
+    env: {
+        openExternal(uri: any) {
+            const s = typeof uri === 'string' ? uri : (uri && uri.toString ? uri.toString() : String(uri));
+            state.openedUris.push(s);
+            return Promise.resolve(true);
+        },
     },
     debug: {
         startDebugging: () => Promise.resolve(true),
