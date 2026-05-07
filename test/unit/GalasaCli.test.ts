@@ -2,6 +2,7 @@ import { expect } from 'chai';
 import * as sinon from 'sinon';
 import * as fs from 'fs';
 import * as os from 'os';
+import * as path from 'path';
 import * as childProcess from 'child_process';
 import { EventEmitter } from 'events';
 import {
@@ -55,7 +56,7 @@ describe('GalasaCli — config helpers', () => {
 
         it('defaults to ~/.galasa when neither set', () => {
             const home = os.homedir();
-            expect(getGalasaHome()).to.equal(`${home}/.galasa`.replace(/\\/g, '/').replace(`${home}/.galasa`, `${home}/.galasa`));
+            expect(getGalasaHome()).to.equal(path.join(home, '.galasa'));
         });
     });
 
@@ -157,10 +158,12 @@ describe('GalasaCli — resolveCliExecutable', () => {
     });
 
     it('treats configured path as directory and joins binary name', () => {
-        state.config['galasa.cliPath'] = '/opt/cli-dir';
-        existsStub.callsFake((p: string) => p === '/opt/cli-dir/galasactl' || p === '/opt/cli-dir/galasactl.exe');
+        const dir = '/opt/cli-dir';
+        const expected = path.join(dir, os.platform() === 'win32' ? 'galasactl.exe' : 'galasactl');
+        state.config['galasa.cliPath'] = dir;
+        existsStub.callsFake((p: string) => p === expected);
         const exe = resolveCliExecutable();
-        expect(exe.startsWith('/opt/cli-dir/galasactl')).to.equal(true);
+        expect(exe).to.equal(expected);
     });
 
     it('falls through to configured value when nothing exists', () => {

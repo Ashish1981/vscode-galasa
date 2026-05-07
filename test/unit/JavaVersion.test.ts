@@ -1,6 +1,9 @@
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import * as childProcess from 'child_process';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import {
     parseJavaVersion,
     isVersionSupported,
@@ -12,7 +15,9 @@ import {
     MAX_SUPPORTED_JAVA,
 } from '../../src/utils/JavaVersion';
 import { state, resetState } from '../_helpers/vscodeStub';
-import * as fs from 'fs';
+
+const JAVA_BIN = os.platform() === 'win32' ? 'java.exe' : 'java';
+const javaUnder = (home: string) => path.join(home, 'bin', JAVA_BIN);
 
 describe('parseJavaVersion', () => {
     const cases: Array<{ label: string; input: string; expected: number | undefined }> = [
@@ -174,11 +179,15 @@ describe('detectJava (with stubbed spawn)', () => {
     });
 
     it('prefers configured galasa.javaHome over JAVA_HOME and PATH', () => {
-        state.config['galasa.javaHome'] = '/opt/jdk21';
-        process.env.JAVA_HOME = '/opt/jdk17';
+        const home21 = path.join(os.tmpdir(), 'jdk21');
+        const home17 = path.join(os.tmpdir(), 'jdk17');
+        const bin21 = javaUnder(home21);
+        const bin17 = javaUnder(home17);
+        state.config['galasa.javaHome'] = home21;
+        process.env.JAVA_HOME = home17;
         spawnStub.callsFake((bin: string) => {
-            if (bin.startsWith('/opt/jdk21')) return fakeSpawnReturn('openjdk version "21.0.2"');
-            if (bin.startsWith('/opt/jdk17')) return fakeSpawnReturn('openjdk version "17.0.9"');
+            if (bin === bin21) return fakeSpawnReturn('openjdk version "21.0.2"');
+            if (bin === bin17) return fakeSpawnReturn('openjdk version "17.0.9"');
             return fakeSpawnReturn('openjdk version "11.0.21"');
         });
         const r = detectJava();
@@ -188,9 +197,11 @@ describe('detectJava (with stubbed spawn)', () => {
     });
 
     it('falls back to JAVA_HOME when galasa.javaHome unset', () => {
-        process.env.JAVA_HOME = '/opt/jdk17';
+        const home17 = path.join(os.tmpdir(), 'jdk17');
+        const bin17 = javaUnder(home17);
+        process.env.JAVA_HOME = home17;
         spawnStub.callsFake((bin: string) => {
-            if (bin.startsWith('/opt/jdk17')) return fakeSpawnReturn('openjdk version "17.0.9"');
+            if (bin === bin17) return fakeSpawnReturn('openjdk version "17.0.9"');
             return fakeSpawnReturn('openjdk version "11.0.21"');
         });
         const r = detectJava();
@@ -206,9 +217,11 @@ describe('detectJava (with stubbed spawn)', () => {
     });
 
     it('skips a candidate whose version string is unparseable', () => {
-        process.env.JAVA_HOME = '/opt/broken';
+        const homeBroken = path.join(os.tmpdir(), 'broken');
+        const binBroken = javaUnder(homeBroken);
+        process.env.JAVA_HOME = homeBroken;
         spawnStub.callsFake((bin: string) => {
-            if (bin.startsWith('/opt/broken')) return fakeSpawnReturn('this is not a java version banner');
+            if (bin === binBroken) return fakeSpawnReturn('this is not a java version banner');
             return fakeSpawnReturn('openjdk version "21.0.0"');
         });
         const r = detectJava();
