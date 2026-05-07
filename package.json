@@ -589,7 +589,7 @@
 	},
 	"devDependencies": {
 		"@types/node": "^18.0.0",
-		"@types/vscode": "^1.45.1",
+		"@types/vscode": "^1.118.0",
 		"glob": "^7.1.6",
 		"typescript": "^5.4.0"
 	},
