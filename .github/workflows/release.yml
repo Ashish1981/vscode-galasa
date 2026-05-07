@@ -75,7 +75,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: npm
 
       - name: Sync package.json version
         shell: bash
@@ -96,7 +95,7 @@ jobs:
           TARGET: ${{ needs.resolve.outputs.version }}
 
       - name: Install dependencies
-        run: npm ci --no-audit --no-fund
+        run: npm install --no-audit --no-fund
 
       - name: Compile TypeScript
         run: npx tsc -p ./
