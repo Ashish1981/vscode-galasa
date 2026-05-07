@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { execFileSync, ExecFileSyncOptions } from 'child_process';
+import { spawnSync } from 'child_process';
 import * as vscode from 'vscode';
 
 export const MIN_SUPPORTED_JAVA = 8;
@@ -49,31 +49,25 @@ function joinJavaBin(javaHome: string): string {
 }
 
 function tryQueryJava(javaPath: string): { major: number; raw: string } | undefined {
-    if (!fs.existsSync(javaPath)) {
+    const isPathRef = javaPath.includes(path.sep) || path.isAbsolute(javaPath);
+    if (isPathRef && !fs.existsSync(javaPath)) {
         return undefined;
     }
     try {
-        const opts: ExecFileSyncOptions = {
+        const result = spawnSync(javaPath, ['-version'], {
             encoding: 'utf8',
-            stdio: ['ignore', 'pipe', 'pipe'],
             timeout: 5000
-        };
-        const output = execFileSync(javaPath, ['-version'], opts);
-        const stderrOutput = (output && output.toString()) || '';
-        const major = parseJavaVersion(stderrOutput);
+        });
+        if (result.error) {
+            return undefined;
+        }
+        const combined = (result.stdout || '') + '\n' + (result.stderr || '');
+        const major = parseJavaVersion(combined);
         if (major === undefined) {
             return undefined;
         }
-        return { major, raw: stderrOutput.trim().split(/\r?\n/)[0] };
+        return { major, raw: combined.trim().split(/\r?\n/)[0] };
     } catch (err) {
-        const e: any = err;
-        const stderr = e && e.stderr ? e.stderr.toString() : '';
-        const stdout = e && e.stdout ? e.stdout.toString() : '';
-        const combined = stderr + '\n' + stdout;
-        const major = parseJavaVersion(combined);
-        if (major !== undefined) {
-            return { major, raw: combined.trim().split(/\r?\n/)[0] };
-        }
         return undefined;
     }
 }
