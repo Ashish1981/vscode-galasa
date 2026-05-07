@@ -619,7 +619,7 @@
 		"gulp": "^4.0.2",
 		"request": "^2.88.2",
 		"rimraf": "^3.0.2",
-		"unzipper": "^0.10.11"
+		"unzipper": "^0.12.3"
 	},
 	"devDependencies": {
 		"@types/chai": "^4.3.20",
