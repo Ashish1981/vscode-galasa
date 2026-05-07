@@ -2,7 +2,7 @@
 .vscode-test/**
 out/test/**
 vsc-extension-quickstart.md
-tsconfig.json
+!tsconfig.json
 **/.eslintrc.json
 **/*.map
 *.vsix
