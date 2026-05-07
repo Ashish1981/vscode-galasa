@@ -16,6 +16,17 @@ export interface GalasaCliRunOptions {
     showInTerminal?: boolean;
     terminalName?: string;
     captureOutput?: boolean;
+    timeoutMs?: number;
+}
+
+export const DEFAULT_CLI_TIMEOUT_MS = 120_000;
+
+export function getConfiguredCliTimeoutMs(): number {
+    const configured = vscode.workspace.getConfiguration('galasa').get<number>('cliTimeoutMs');
+    if (typeof configured === 'number' && Number.isFinite(configured) && configured > 0) {
+        return Math.floor(configured);
+    }
+    return DEFAULT_CLI_TIMEOUT_MS;
 }
 
 function getCliExecutableName(): string {
@@ -92,6 +103,8 @@ export async function runGalasaCli(args: string[], options: GalasaCliRunOptions 
         return { code: 0, stdout: '', stderr: '' };
     }
 
+    const timeoutMs = options.timeoutMs ?? getConfiguredCliTimeoutMs();
+
     return new Promise<GalasaCliResult>((resolve) => {
         const spawnOpts: SpawnOptions = {
             cwd,
@@ -101,6 +114,11 @@ export async function runGalasaCli(args: string[], options: GalasaCliRunOptions 
         const child = spawn(exe, args, spawnOpts);
         let stdout = '';
         let stderr = '';
+        let timedOut = false;
+        const timer = timeoutMs > 0 ? setTimeout(() => {
+            timedOut = true;
+            try { child.kill('SIGKILL'); } catch { /* ignore */ }
+        }, timeoutMs) : undefined;
 
         child.stdout?.on('data', (chunk: Buffer) => {
             stdout += chunk.toString();
@@ -109,9 +127,15 @@ export async function runGalasaCli(args: string[], options: GalasaCliRunOptions 
             stderr += chunk.toString();
         });
         child.on('error', (err: Error) => {
+            if (timer) clearTimeout(timer);
             resolve({ code: -1, stdout, stderr: stderr + '\n' + err.message });
         });
         child.on('close', (code: number | null) => {
+            if (timer) clearTimeout(timer);
+            if (timedOut) {
+                resolve({ code: -2, stdout, stderr: stderr + `\nTimed out after ${timeoutMs}ms` });
+                return;
+            }
             resolve({ code: code ?? 0, stdout, stderr });
         });
     });

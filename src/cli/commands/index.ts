@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { registerAuthCommands } from './AuthCommands';
 import { registerRunsCommands } from './RunsCommands';
+import { registerRunsExtraCommands } from './RunsExtraCommands';
 import { registerPropertiesCommands } from './PropertiesCommands';
 import { registerProjectCommands } from './ProjectCommands';
 import { registerSecretsCommands } from './SecretsCommands';
@@ -9,10 +10,12 @@ import { registerMonitorsCommands } from './MonitorsCommands';
 import { registerRolesCommands } from './RolesCommands';
 import { registerUsersCommands } from './UsersCommands';
 import { registerStreamsCommands } from './StreamsCommands';
+import { registerTagsCommands } from './TagsCommands';
 
 export function registerAllGalasaCliCommands(context: vscode.ExtensionContext): void {
     registerAuthCommands(context);
     registerRunsCommands(context);
+    registerRunsExtraCommands(context);
     registerPropertiesCommands(context);
     registerProjectCommands(context);
     registerSecretsCommands(context);
@@ -21,4 +24,5 @@ export function registerAllGalasaCliCommands(context: vscode.ExtensionContext): 
     registerRolesCommands(context);
     registerUsersCommands(context);
     registerStreamsCommands(context);
+    registerTagsCommands(context);
 }

@@ -8,8 +8,8 @@
 	"preview": true,
 	"icon": "resources/GalasaLogo.png",
 	"engines": {
-		"vscode": "^1.118.0",
-		"node": ">=20.0.0"
+		"vscode": "^1.116.0",
+		"node": ">=24.0.0"
 	},
 	"categories": [
 		"Debuggers",
@@ -17,54 +17,6 @@
 		"Other"
 	],
 	"activationEvents": [
-		"*",
-		"onView:galasa-ras",
-		"onCommand:galasa-test.refresh",
-		"onCommand:galasa-test.debug",
-		"onCommand:galasa-ras.refresh",
-		"onCommand:galasa-ras.open",
-		"onCommand:galasa-test.setupWorkspace",
-		"onCommand:galasa-test.createExamples",
-		"onCommand:galasa-ras.artifacts",
-		"onCommand:galasa-ras.runlog",
-		"onCommand:galasa-ras.delete",
-		"onCommand:galasa-artifacts.open",
-		"onCommand:galasa-envionment.addEnv",
-		"onCommand:galasa-envionment.refresh",
-		"onCommand:galasa-envionment.delEnv",
-		"onCommand:galasa-envionment.active",
-		"onCommand:galasa.auth.login",
-		"onCommand:galasa.auth.logout",
-		"onCommand:galasa.auth.tokens.get",
-		"onCommand:galasa.auth.tokens.delete",
-		"onCommand:galasa.runs.prepare",
-		"onCommand:galasa.runs.submit",
-		"onCommand:galasa.runs.submitLocal",
-		"onCommand:galasa.runs.get",
-		"onCommand:galasa.runs.delete",
-		"onCommand:galasa.runs.download",
-		"onCommand:galasa.runs.reset",
-		"onCommand:galasa.runs.cancel",
-		"onCommand:galasa.local.init",
-		"onCommand:galasa.project.create",
-		"onCommand:galasa.properties.get",
-		"onCommand:galasa.properties.set",
-		"onCommand:galasa.properties.delete",
-		"onCommand:galasa.properties.namespaces.get",
-		"onCommand:galasa.resources.apply",
-		"onCommand:galasa.resources.create",
-		"onCommand:galasa.resources.update",
-		"onCommand:galasa.resources.delete",
-		"onCommand:galasa.monitors.get",
-		"onCommand:galasa.monitors.set",
-		"onCommand:galasa.secrets.get",
-		"onCommand:galasa.secrets.set",
-		"onCommand:galasa.secrets.delete",
-		"onCommand:galasa.roles.get",
-		"onCommand:galasa.users.get",
-		"onCommand:galasa.users.set",
-		"onCommand:galasa.streams.get",
-		"onCommand:galasa.streams.delete",
 		"onDebug"
 	],
 	"main": "./out/extension",
@@ -290,6 +242,66 @@
 				"command": "galasa.streams.delete",
 				"title": "Galasa: Streams - Delete",
 				"category": "Galasa"
+			},
+			{
+				"command": "galasa.streams.set",
+				"title": "Galasa: Streams - Set",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.runs.update",
+				"title": "Galasa: Runs - Update",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.runs.cleanup",
+				"title": "Galasa: Runs - Cleanup",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.runs.cleanupLocal",
+				"title": "Galasa: Runs - Cleanup Local",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.tags.get",
+				"title": "Galasa: Tags - Get",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.tags.set",
+				"title": "Galasa: Tags - Set",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.tags.delete",
+				"title": "Galasa: Tags - Delete",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.users.delete",
+				"title": "Galasa: Users - Delete",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.diagnostics",
+				"title": "Galasa: Diagnostics",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.runs.deleteBulk",
+				"title": "Galasa: Runs - Delete (Bulk)",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.runs.tail",
+				"title": "Galasa: Runs - Tail",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.auth.status",
+				"title": "Galasa: Auth - Status",
+				"category": "Galasa"
 			}
 		],
 		"viewsContainers": {
@@ -317,6 +329,16 @@
 				}
 			]
 		},
+		"viewsWelcome": [
+			{
+				"view": "galasa-environment",
+				"contents": "No Galasa environment properties yet.\n[Add Environment](command:galasa-envionment.addEnv)\n[Run Diagnostics](command:galasa.diagnostics)\nLearn more in the [Galasa docs](https://galasa.dev)."
+			},
+			{
+				"view": "galasa-ras",
+				"contents": "No local Galasa runs yet.\n[Initialize Galasa Home](command:galasa.local.init)\n[Submit Local Run](command:galasa.runs.submitLocal)\n[Run Diagnostics](command:galasa.diagnostics)"
+			}
+		],
 		"configuration": {
 			"title": "Galasa",
 			"properties": {
@@ -405,14 +427,25 @@
 				},
 				"galasa.exampleSubdirectories": {
 					"type": "array",
-					"items": { "type": "string" },
-					"default": ["manager", "tests"],
+					"items": {
+						"type": "string"
+					},
+					"default": [
+						"manager",
+						"tests"
+					],
 					"description": "Subdirectory suffixes (e.g. 'manager', 'tests') generated for each example project."
 				},
 				"galasa.examplePomPlaceholder": {
 					"type": "string",
 					"default": "%%prefix%%",
 					"description": "Token replaced in pom-example.xml when scaffolding examples."
+				},
+				"galasa.cliTimeoutMs": {
+					"type": "number",
+					"default": 120000,
+					"minimum": 1000,
+					"description": "Timeout (in milliseconds) for non-interactive galasactl invocations. Set to 0 to disable timeout."
 				}
 			}
 		},
@@ -571,7 +604,9 @@
 	"scripts": {
 		"vscode:prepublish": "tsc -p ./",
 		"compile": "gulp build",
-		"watch": "tsc -watch -p ./"
+		"watch": "tsc -watch -p ./",
+		"test": "mocha",
+		"test:typecheck": "tsc -p tsconfig.test.json --noEmit"
 	},
 	"extensionDependencies": [
 		"vscjava.vscode-java-pack"
@@ -584,17 +619,24 @@
 		"gulp": "^4.0.2",
 		"request": "^2.88.2",
 		"rimraf": "^3.0.2",
-		"typescript": "^5.4.0",
 		"unzipper": "^0.10.11"
 	},
 	"devDependencies": {
-		"@types/node": "^18.0.0",
+		"@types/chai": "^4.3.20",
+		"@types/mocha": "^10.0.10",
+		"@types/node": "^24.0.0",
+		"@types/sinon": "^17.0.4",
 		"@types/vscode": "^1.45.1",
+		"chai": "^4.5.0",
 		"glob": "^7.1.6",
-		"typescript": "^5.4.0"
+		"mocha": "^10.8.2",
+		"mocha-junit-reporter": "^2.2.1",
+		"sinon": "^17.0.1",
+		"ts-node": "^10.9.2",
+		"typescript": "^5.4.5"
 	},
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/Ashish1981/vscode-galasa.git"
-    }
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Ashish1981/vscode-galasa.git"
+	}
 }

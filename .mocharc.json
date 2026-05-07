@@ -1,0 +1,7 @@
+{
+    "require": ["ts-node/register", "test/_helpers/setup.ts"],
+    "spec": ["test/unit/**/*.test.ts"],
+    "extensions": ["ts"],
+    "reporter": "spec",
+    "timeout": 10000
+}

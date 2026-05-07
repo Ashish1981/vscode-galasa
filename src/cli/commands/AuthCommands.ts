@@ -1,13 +1,29 @@
 import * as vscode from 'vscode';
 import { appendBootstrapArg, appendGalasaHomeArg, ensureCliAvailable, logCliResult, runGalasaCli, runInTerminal } from '../GalasaCli';
+import { buildAuthStatusArgs } from './argv';
 
 export function registerAuthCommands(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('galasa.auth.login', authLogin),
         vscode.commands.registerCommand('galasa.auth.logout', authLogout),
         vscode.commands.registerCommand('galasa.auth.tokens.get', authTokensGet),
-        vscode.commands.registerCommand('galasa.auth.tokens.delete', authTokensDelete)
+        vscode.commands.registerCommand('galasa.auth.tokens.delete', authTokensDelete),
+        vscode.commands.registerCommand('galasa.auth.status', authStatus)
     );
+}
+
+export async function authStatus(): Promise<void> {
+    if (!(await ensureCliAvailable())) {
+        return;
+    }
+    const args = appendGalasaHomeArg(appendBootstrapArg(buildAuthStatusArgs()));
+    const result = await runGalasaCli(args);
+    logCliResult('auth status', result);
+    if (result.code === 0) {
+        vscode.window.showInformationMessage('Galasa: authenticated.');
+    } else {
+        vscode.window.showWarningMessage('Galasa: not authenticated. Run "Galasa: Auth - Login" first.');
+    }
 }
 
 export async function authLogin(): Promise<void> {

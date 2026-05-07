@@ -1,11 +1,36 @@
 import * as vscode from 'vscode';
 import { appendBootstrapArg, appendGalasaHomeArg, ensureCliAvailable, logCliResult, runGalasaCli } from '../GalasaCli';
+import { buildStreamsSetArgs } from './argv';
 
 export function registerStreamsCommands(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('galasa.streams.get', streamsGet),
-        vscode.commands.registerCommand('galasa.streams.delete', streamsDelete)
+        vscode.commands.registerCommand('galasa.streams.delete', streamsDelete),
+        vscode.commands.registerCommand('galasa.streams.set', streamsSet)
     );
+}
+
+export async function streamsSet(): Promise<void> {
+    if (!(await ensureCliAvailable())) {
+        return;
+    }
+    const name = await vscode.window.showInputBox({ prompt: 'Stream name' });
+    if (!name) {
+        return;
+    }
+    const obr = await vscode.window.showInputBox({ prompt: 'OBR coordinates (optional)' });
+    const mavenRepo = await vscode.window.showInputBox({ prompt: 'Maven repo URL (optional)' });
+    const description = await vscode.window.showInputBox({ prompt: 'Description (optional)' });
+    const testCatalog = await vscode.window.showInputBox({ prompt: 'Test catalog URL (optional)' });
+    const args = appendGalasaHomeArg(appendBootstrapArg(buildStreamsSetArgs({
+        name,
+        obr: obr || undefined,
+        mavenRepo: mavenRepo || undefined,
+        description: description || undefined,
+        testCatalog: testCatalog || undefined,
+    })));
+    const result = await runGalasaCli(args);
+    logCliResult(`streams set ${name}`, result);
 }
 
 export async function streamsGet(): Promise<void> {

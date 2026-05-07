@@ -17,6 +17,8 @@ import { setupWorkspace } from './config/setup';
 import { detectJava, describeJava, isVersionSupported, MAX_SUPPORTED_JAVA, MIN_SUPPORTED_JAVA, showUnsupportedJavaWarning, JavaVersionError } from './utils/JavaVersion';
 import { registerAllGalasaCliCommands } from './cli/commands';
 import { getOutputChannel } from './cli/GalasaCli';
+import { runDiagnostics } from './utils/diagnostics';
+import { ensureStatusBar, refreshStatusBar } from './utils/statusBar';
 
 const galasaPath = path.join(process.env.USERPROFILE ? process.env.USERPROFILE : "", process.env.HOME ? process.env.HOME : "", ".galasa");
 
@@ -25,6 +27,20 @@ export function activate(context: vscode.ExtensionContext) {
     setupWorkspace(context, galasaPath);
     validateJavaOnActivation();
     registerAllGalasaCliCommands(context);
+    ensureStatusBar(context);
+
+    const extVersion = JSON.parse(fs.readFileSync(path.join(context.extensionPath, "package.json")).toString()).version;
+    context.subscriptions.push(
+        vscode.commands.registerCommand('galasa.diagnostics', () => runDiagnostics(extVersion))
+    );
+
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('galasa.javaHome') || e.affectsConfiguration('galasa.cliPath')) {
+                refreshStatusBar();
+            }
+        })
+    );
 
     let activeLabel = "";
 

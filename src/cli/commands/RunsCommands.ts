@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { appendBootstrapArg, appendGalasaHomeArg, ensureCliAvailable, logCliResult, runGalasaCli, runInTerminal } from '../GalasaCli';
+import { buildRunsBulkDeleteArgs, buildRunsTailArgs, parseNameList } from './argv';
 
 export function registerRunsCommands(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
@@ -8,10 +9,71 @@ export function registerRunsCommands(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('galasa.runs.submitLocal', runsSubmitLocal),
         vscode.commands.registerCommand('galasa.runs.get', runsGet),
         vscode.commands.registerCommand('galasa.runs.delete', runsDelete),
+        vscode.commands.registerCommand('galasa.runs.deleteBulk', runsDeleteBulk),
         vscode.commands.registerCommand('galasa.runs.download', runsDownload),
         vscode.commands.registerCommand('galasa.runs.reset', runsReset),
-        vscode.commands.registerCommand('galasa.runs.cancel', runsCancel)
+        vscode.commands.registerCommand('galasa.runs.cancel', runsCancel),
+        vscode.commands.registerCommand('galasa.runs.tail', runsTail)
     );
+}
+
+export async function runsDeleteBulk(): Promise<void> {
+    if (!(await ensureCliAvailable())) {
+        return;
+    }
+    const raw = await vscode.window.showInputBox({
+        prompt: 'Run names to delete (comma- or whitespace-separated)',
+        placeHolder: 'e.g., U123, U124 U125',
+    });
+    if (!raw) {
+        return;
+    }
+    const names = parseNameList(raw);
+    if (names.length === 0) {
+        vscode.window.showWarningMessage('No run names provided.');
+        return;
+    }
+    const confirm = await vscode.window.showWarningMessage(
+        `Delete ${names.length} run(s) from the ecosystem?\n${names.join(', ')}`,
+        { modal: true },
+        'Delete'
+    );
+    if (confirm !== 'Delete') {
+        return;
+    }
+    const argvList = buildRunsBulkDeleteArgs({ names });
+    let successes = 0;
+    const failures: string[] = [];
+    for (let i = 0; i < argvList.length; i++) {
+        const fullArgs = appendGalasaHomeArg(appendBootstrapArg(argvList[i]));
+        const result = await runGalasaCli(fullArgs);
+        logCliResult(`runs delete ${names[i]}`, result);
+        if (result.code === 0) {
+            successes++;
+        } else {
+            failures.push(names[i]);
+        }
+    }
+    if (failures.length === 0) {
+        vscode.window.showInformationMessage(`Deleted ${successes} run(s).`);
+    } else {
+        vscode.window.showWarningMessage(`Deleted ${successes} run(s); failures: ${failures.join(', ')}`);
+    }
+}
+
+export async function runsTail(runName?: string): Promise<void> {
+    if (!(await ensureCliAvailable())) {
+        return;
+    }
+    let name = runName;
+    if (!name) {
+        name = await promptForName('Run name to tail', 'e.g., U123');
+    }
+    if (!name) {
+        return;
+    }
+    const args = appendGalasaHomeArg(appendBootstrapArg(buildRunsTailArgs({ name })));
+    await runInTerminal(args, `galasactl runs tail ${name}`);
 }
 
 async function promptForName(prompt: string, placeHolder?: string): Promise<string | undefined> {

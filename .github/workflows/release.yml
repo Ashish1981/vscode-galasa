@@ -74,7 +74,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Sync package.json version
         shell: bash
@@ -99,6 +99,12 @@ jobs:
 
       - name: Compile TypeScript
         run: npx tsc -p ./
+
+      - name: Typecheck tests
+        run: npx tsc -p tsconfig.test.json --noEmit
+
+      - name: Run unit tests
+        run: npm test
 
       - name: Install vsce
         run: npm install --no-save @vscode/vsce
@@ -180,7 +186,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install vsce
         run: npm install --no-save @vscode/vsce
@@ -212,7 +218,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install ovsx
         run: npm install --no-save ovsx

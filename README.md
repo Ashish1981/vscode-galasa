@@ -2,6 +2,8 @@
 
 _This extension is directly linked to the [Java Extension Pack](https://code.visualstudio.com/docs/languages/java) to be able to compile your Java-workspace and to build Galasa-tests using Maven for Java. This is installed simultaneously with the Galasa extension._
 
+> **Full reference:** [docs/USER_GUIDE.md](docs/USER_GUIDE.md) — every setting, every command, and Z host / non-Z host / hybrid workflow recipes.
+
 ## Prerequisites
 
 -   A JDK between version **8 and 26** (inclusive). Any modern OpenJDK distribution will work (Temurin, Zulu, Corretto, Microsoft Build, Liberica, Oracle, etc.). The extension automatically detects the active Java in this order:

@@ -1,11 +1,39 @@
 import * as vscode from 'vscode';
 import { appendBootstrapArg, appendGalasaHomeArg, ensureCliAvailable, logCliResult, runGalasaCli } from '../GalasaCli';
+import { buildUsersDeleteArgs } from './argv';
 
 export function registerUsersCommands(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('galasa.users.get', usersGet),
-        vscode.commands.registerCommand('galasa.users.set', usersSet)
+        vscode.commands.registerCommand('galasa.users.set', usersSet),
+        vscode.commands.registerCommand('galasa.users.delete', usersDelete)
     );
+}
+
+export async function usersDelete(): Promise<void> {
+    if (!(await ensureCliAvailable())) {
+        return;
+    }
+    const loginId = await vscode.window.showInputBox({ prompt: 'User login id to delete' });
+    if (!loginId) {
+        return;
+    }
+    const confirm = await vscode.window.showWarningMessage(
+        `Delete user '${loginId}'?`,
+        { modal: true },
+        'Delete'
+    );
+    if (confirm !== 'Delete') {
+        return;
+    }
+    const args = appendGalasaHomeArg(appendBootstrapArg(buildUsersDeleteArgs({ name: loginId })));
+    const result = await runGalasaCli(args);
+    logCliResult(`users delete ${loginId}`, result);
+    if (result.code === 0) {
+        vscode.window.showInformationMessage(`User ${loginId} deleted.`);
+    } else {
+        vscode.window.showErrorMessage(`Delete failed: ${result.stderr || result.stdout}`);
+    }
 }
 
 export async function usersGet(): Promise<void> {
