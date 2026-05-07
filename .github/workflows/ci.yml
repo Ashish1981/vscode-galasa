@@ -71,7 +71,7 @@ jobs:
         run: npx tsc -p tsconfig.test.json --noEmit
 
       - name: Upload compiled output
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tsc-out
           path: out/
@@ -110,7 +110,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results-${{ matrix.os }}
           path: test-results/
@@ -213,7 +213,7 @@ jobs:
         run: npx --yes @vscode/vsce package --out galasa-plugin.vsix
 
       - name: Upload VSIX artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: vsix-package
           path: galasa-plugin.vsix
