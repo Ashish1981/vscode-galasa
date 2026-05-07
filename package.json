@@ -1,0 +1,596 @@
+{
+	"name": "galasa-plugin",
+	"displayName": "galasa",
+	"description": "The Galasa Visual Studio Code plugin enables the ability to develop and run Galasa tests locally.",
+	"publisher": "galasa",
+	"version": "0.15.0",
+	"symbolicversion": "0.15.0",
+	"preview": true,
+	"icon": "resources/GalasaLogo.png",
+	"engines": {
+		"vscode": "^1.45.1",
+		"node": ">=12.0.0"
+	},
+	"categories": [
+		"Debuggers",
+		"Programming Languages",
+		"Other"
+	],
+	"activationEvents": [
+		"*",
+		"onView:galasa-ras",
+		"onCommand:galasa-test.refresh",
+		"onCommand:galasa-test.debug",
+		"onCommand:galasa-ras.refresh",
+		"onCommand:galasa-ras.open",
+		"onCommand:galasa-test.setupWorkspace",
+		"onCommand:galasa-test.createExamples",
+		"onCommand:galasa-ras.artifacts",
+		"onCommand:galasa-ras.runlog",
+		"onCommand:galasa-ras.delete",
+		"onCommand:galasa-artifacts.open",
+		"onCommand:galasa-envionment.addEnv",
+		"onCommand:galasa-envionment.refresh",
+		"onCommand:galasa-envionment.delEnv",
+		"onCommand:galasa-envionment.active",
+		"onCommand:galasa.auth.login",
+		"onCommand:galasa.auth.logout",
+		"onCommand:galasa.auth.tokens.get",
+		"onCommand:galasa.auth.tokens.delete",
+		"onCommand:galasa.runs.prepare",
+		"onCommand:galasa.runs.submit",
+		"onCommand:galasa.runs.submitLocal",
+		"onCommand:galasa.runs.get",
+		"onCommand:galasa.runs.delete",
+		"onCommand:galasa.runs.download",
+		"onCommand:galasa.runs.reset",
+		"onCommand:galasa.runs.cancel",
+		"onCommand:galasa.local.init",
+		"onCommand:galasa.project.create",
+		"onCommand:galasa.properties.get",
+		"onCommand:galasa.properties.set",
+		"onCommand:galasa.properties.delete",
+		"onCommand:galasa.properties.namespaces.get",
+		"onCommand:galasa.resources.apply",
+		"onCommand:galasa.resources.create",
+		"onCommand:galasa.resources.update",
+		"onCommand:galasa.resources.delete",
+		"onCommand:galasa.monitors.get",
+		"onCommand:galasa.monitors.set",
+		"onCommand:galasa.secrets.get",
+		"onCommand:galasa.secrets.set",
+		"onCommand:galasa.secrets.delete",
+		"onCommand:galasa.roles.get",
+		"onCommand:galasa.users.get",
+		"onCommand:galasa.users.set",
+		"onCommand:galasa.streams.get",
+		"onCommand:galasa.streams.delete",
+		"onDebug"
+	],
+	"main": "./out/extension",
+	"contributes": {
+		"commands": [
+			{
+				"command": "galasa-test.debug",
+				"title": "Debug Galasa test locally",
+				"icon": "/resources/GalasaLogo.svg"
+			},
+			{
+				"command": "galasa-ras.open",
+				"title": "Open a file from the RAS",
+				"icon": "$(go-to-file)"
+			},
+			{
+				"command": "galasa-test.createExamples",
+				"title": "Create SimBank Examples",
+				"icon": "$(file-code)"
+			},
+			{
+				"command": "galasa-test.simbank",
+				"title": "Launch Simbank",
+				"icon": "$(rocket)"
+			},
+			{
+				"command": "galasa-ras.refresh",
+				"title": "Refresh the local RAS",
+				"icon": "$(refresh)"
+			},
+			{
+				"command": "galasa-ras.runlog",
+				"title": "Run Log"
+			},
+			{
+				"command": "galasa-ras.delete",
+				"title": "Delete"
+			},
+			{
+				"command": "galasa-artifacts.open",
+				"title": "Open",
+				"icon": "$(go-to-file)"
+			},
+			{
+				"command": "galasa-test.export",
+				"title": "Galasa Export launch.json",
+				"icon": "$(json)"
+			},
+			{
+				"command": "galasa-envionment.refresh",
+				"title": "Refresh",
+				"icon": "$(refresh)"
+			},
+			{
+				"command": "galasa-envionment.addEnv",
+				"title": "Add Environment",
+				"icon": "$(add)"
+			},
+			{
+				"command": "galasa-envionment.delEnv",
+				"title": "Delete"
+			},
+			{
+				"command": "galasa-envionment.active",
+				"title": "Set Active"
+			},
+			{
+				"command": "galasa.auth.login",
+				"title": "Galasa: Auth - Login",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.auth.logout",
+				"title": "Galasa: Auth - Logout",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.auth.tokens.get",
+				"title": "Galasa: Auth - List Tokens",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.auth.tokens.delete",
+				"title": "Galasa: Auth - Revoke Token",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.runs.prepare",
+				"title": "Galasa: Runs - Prepare Portfolio",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.runs.submit",
+				"title": "Galasa: Runs - Submit Portfolio",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.runs.submitLocal",
+				"title": "Galasa: Runs - Submit Local",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.runs.get",
+				"title": "Galasa: Runs - Get",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.runs.delete",
+				"title": "Galasa: Runs - Delete",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.runs.download",
+				"title": "Galasa: Runs - Download Artifacts",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.runs.reset",
+				"title": "Galasa: Runs - Reset",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.runs.cancel",
+				"title": "Galasa: Runs - Cancel",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.local.init",
+				"title": "Galasa: Local - Init",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.project.create",
+				"title": "Galasa: Project - Create",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.properties.get",
+				"title": "Galasa: Properties - Get",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.properties.set",
+				"title": "Galasa: Properties - Set",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.properties.delete",
+				"title": "Galasa: Properties - Delete",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.properties.namespaces.get",
+				"title": "Galasa: Properties - List Namespaces",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.resources.apply",
+				"title": "Galasa: Resources - Apply",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.resources.create",
+				"title": "Galasa: Resources - Create",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.resources.update",
+				"title": "Galasa: Resources - Update",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.resources.delete",
+				"title": "Galasa: Resources - Delete",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.monitors.get",
+				"title": "Galasa: Monitors - Get",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.monitors.set",
+				"title": "Galasa: Monitors - Set",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.secrets.get",
+				"title": "Galasa: Secrets - Get",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.secrets.set",
+				"title": "Galasa: Secrets - Set",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.secrets.delete",
+				"title": "Galasa: Secrets - Delete",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.roles.get",
+				"title": "Galasa: Roles - Get",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.users.get",
+				"title": "Galasa: Users - Get",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.users.set",
+				"title": "Galasa: Users - Set Role",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.streams.get",
+				"title": "Galasa: Streams - Get",
+				"category": "Galasa"
+			},
+			{
+				"command": "galasa.streams.delete",
+				"title": "Galasa: Streams - Delete",
+				"category": "Galasa"
+			}
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "galasa",
+					"title": "Galasa",
+					"icon": "/resources/GalasaLogo.svg"
+				}
+			]
+		},
+		"views": {
+			"galasa": [
+				{
+					"id": "galasa-environment",
+					"name": "Environment Properties"
+				},
+				{
+					"id": "galasa-ras",
+					"name": "Local Runs"
+				},
+				{
+					"id": "galasa-artifacts",
+					"name": "Artifacts"
+				}
+			]
+		},
+		"configuration": {
+			"title": "Galasa",
+			"properties": {
+				"galasa.maven-remote": {
+					"type": "string",
+					"default": "https://repo.maven.apache.org/maven2/",
+					"description": "%galasavscode.config.galasa.maven-remote%"
+				},
+				"galasa.maven-local": {
+					"type": "string",
+					"default": "",
+					"description": "%galasavscode.config.galasa.maven-local%"
+				},
+				"galasa.version": {
+					"type": "string",
+					"default": "LATEST",
+					"description": "%galasavscode.config.galasa.version%"
+				},
+				"galasa.requestor": {
+					"type": "string",
+					"default": "unknown"
+				},
+				"galasa.overrides": {
+					"type": "boolean",
+					"default": true
+				},
+				"galasa.javaHome": {
+					"type": "string",
+					"default": "",
+					"description": "Path to a JDK installation (Java 8-26 supported). Falls back to java.home, JAVA_HOME, then PATH."
+				},
+				"galasa.cliPath": {
+					"type": "string",
+					"default": "",
+					"description": "Path to the galasactl executable. If empty, the extension uses the executable on PATH."
+				},
+				"galasa.home": {
+					"type": "string",
+					"default": "",
+					"description": "Override for GALASA_HOME. If empty, defaults to ~/.galasa or the GALASA_HOME environment variable."
+				},
+				"galasa.bootstrap": {
+					"type": "string",
+					"default": "",
+					"description": "Reference (file:// URL or HTTPS URL) to the bootstrap.properties used by the Galasa ecosystem."
+				},
+				"galasa.bootJarPath": {
+					"type": "string",
+					"default": "",
+					"description": "Absolute path to the Galasa boot jar containing the launcher main class."
+				},
+				"galasa.bootLauncherMainClass": {
+					"type": "string",
+					"default": "",
+					"description": "Fully-qualified main class used to launch a debug session (e.g. dev.galasa.boot.Launcher)."
+				},
+				"galasa.uberObr": {
+					"type": "string",
+					"default": "",
+					"description": "Maven coordinates (mvn:group/artifact/version/obr) of the uber OBR to load when launching a test."
+				},
+				"galasa.testAnnotation": {
+					"type": "string",
+					"default": "@Test",
+					"description": "Annotation that marks a Galasa test method in Java sources."
+				},
+				"galasa.testAnnotationImport": {
+					"type": "string",
+					"default": "",
+					"description": "Optional fully-qualified import that must be present alongside the test annotation. Leave empty to skip the import check."
+				},
+				"galasa.simbankJarPath": {
+					"type": "string",
+					"default": "",
+					"description": "Absolute path to the Simbank distribution jar. Required to launch Simbank from the extension."
+				},
+				"galasa.examplesArchivePath": {
+					"type": "string",
+					"default": "",
+					"description": "Absolute path to a zip archive containing example projects."
+				},
+				"galasa.examplePackagePrefix": {
+					"type": "string",
+					"default": "",
+					"description": "Java package prefix used in the bundled examples. New project names will reuse this prefix when scaffolding."
+				},
+				"galasa.exampleSubdirectories": {
+					"type": "array",
+					"items": { "type": "string" },
+					"default": ["manager", "tests"],
+					"description": "Subdirectory suffixes (e.g. 'manager', 'tests') generated for each example project."
+				},
+				"galasa.examplePomPlaceholder": {
+					"type": "string",
+					"default": "%%prefix%%",
+					"description": "Token replaced in pom-example.xml when scaffolding examples."
+				}
+			}
+		},
+		"menus": {
+			"view/title": [
+				{
+					"command": "galasa-test.simbank",
+					"when": "view == galasa-ras",
+					"group": "navigation@1"
+				},
+				{
+					"command": "galasa-test.createExamples",
+					"when": "view == galasa-ras",
+					"group": "navigation@2"
+				},
+				{
+					"command": "galasa-ras.refresh",
+					"when": "view == galasa-ras",
+					"group": "navigation@3"
+				},
+				{
+					"command": "galasa-envionment.refresh",
+					"when": "view == galasa-environment",
+					"group": "navigation@2"
+				},
+				{
+					"command": "galasa-envionment.addEnv",
+					"when": "view == galasa-environment",
+					"group": "navigation@1"
+				}
+			],
+			"view/item/context": [
+				{
+					"command": "galasa-ras.runlog",
+					"when": "view == galasa-ras && viewItem == localrun",
+					"group": "navigation@1"
+				},
+				{
+					"command": "galasa-ras.delete",
+					"when": "view == galasa-ras && viewItem == localrun",
+					"group": "navigation@2"
+				},
+				{
+					"command": "galasa-envionment.delEnv",
+					"when": "view == galasa-environment",
+					"group": "navigation@2"
+				},
+				{
+					"command": "galasa-envionment.active",
+					"when": "view == galasa-environment",
+					"group": "navigation@1"
+				}
+			],
+			"editor/title": [
+				{
+					"when": "resourceLangId == java || resourceLangId == feature",
+					"command": "galasa-test.debug",
+					"group": "navigation"
+				},
+				{
+					"when": "resourceLangId == java || resourceLangId == feature",
+					"command": "galasa-test.export",
+					"group": "navigation"
+				}
+			]
+		},
+		"debuggers": [
+			{
+				"type": "galasa",
+				"label": "Galasa Debug",
+				"program": "./out/local/debugger/debugAdapter.js",
+				"runtime": "java",
+				"configurationAttributes": {
+					"launch": {
+						"required": [],
+						"properties": {
+							"testclass": {
+								"type": "string",
+								"description": "Test Bundle, package and class of test to be run",
+								"default": "bundlename/testclass"
+							},
+							"gherkinFeature": {
+								"type": "string",
+								"description": "Gherkin Feature file URI",
+								"default": ""
+							},
+							"environment": {
+								"type": "string",
+								"description": "Galasa Environment Properties to run against",
+								"default": ""
+							},
+							"args": {
+								"type": "string",
+								"description": "Extra arguments to be run with your Galasa Test",
+								"default": ""
+							}
+						}
+					}
+				},
+				"initialConfigurations": [
+					{
+						"type": "galasa",
+						"request": "launch",
+						"name": "Default Galasa",
+						"testclass": "bundlename/testclass",
+						"gherkinFeature": "",
+						"environment": "",
+						"args": ""
+					}
+				],
+				"configurationSnippets": [
+					{
+						"label": "Galasa Debug: Launch",
+						"description": "A new configuration for debugging a users Galasa Test",
+						"body": {
+							"type": "galasa",
+							"request": "launch",
+							"name": "Default Galasa",
+							"testclass": "bundlename/testclass",
+							"gherkinFeature": "",
+							"environment": "",
+							"args": ""
+						}
+					}
+				]
+			}
+		],
+		"snippets": [
+			{
+				"language": "galenv",
+				"path": "./lib/cps/snippets.json"
+			}
+		],
+		"languages": [
+			{
+				"id": "galenv",
+				"extensions": [
+					".galenv"
+				]
+			},
+			{
+				"id": "feature",
+				"extensions": [
+					".feature"
+				]
+			}
+		],
+		"grammars": [
+			{
+				"language": "galenv",
+				"scopeName": "source.galenv",
+				"path": "./src/config/syntaxes/galenv.json"
+			}
+		]
+	},
+	"scripts": {
+		"vscode:prepublish": "tsc -p ./",
+		"compile": "gulp build",
+		"watch": "tsc -watch -p ./"
+	},
+	"extensionDependencies": [
+		"vscjava.vscode-java-pack"
+	],
+	"dependencies": {
+		"@types/rimraf": "^3.0.0",
+		"@types/unzipper": "^0.10.3",
+		"comment-json": "^3.0.2",
+		"glob": "^7.1.6",
+		"gulp": "^4.0.2",
+		"request": "^2.88.2",
+		"rimraf": "^3.0.2",
+		"typescript": "^3.8.3",
+		"unzipper": "^0.10.11"
+	},
+	"devDependencies": {
+		"@types/node": "^13.13.5",
+		"@types/vscode": "^1.45.1",
+		"glob": "^7.1.6",
+		"typescript": "^3.8.3"
+	}
+}
