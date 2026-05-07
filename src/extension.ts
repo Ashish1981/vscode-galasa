@@ -6,7 +6,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { createExampleFiles, launchSimbank } from './local/Examples';
 import { ArtifactProvider, ArtifactItem } from './local/views/TreeViewArtifacts';
-import rimraf = require('rimraf');
+import { rimrafSync } from 'rimraf';
 import { EnvironmentProvider, GalasaEnvironment } from './local/views/TreeViewEnvironmentProperties';
 import { showOverview } from './webviews/RunOverview';
 import {CodeProvider} from "./webviews/CodeProvider";
@@ -193,7 +193,7 @@ export function activate(context: vscode.ExtensionContext) {
     const localArtifactProvider = new ArtifactProvider();
     vscode.window.registerTreeDataProvider("galasa-artifacts", localArtifactProvider);
     vscode.commands.registerCommand("galasa-ras.delete", (run : LocalRun) => {
-        rimraf(run.runPath, () => {});
+        try { rimrafSync(run.runPath); } catch { /* ignore */ }
         localRasProvider.refresh();
     });
     vscode.commands.registerCommand("galasa-artifacts.open", (artifact : ArtifactItem) => {

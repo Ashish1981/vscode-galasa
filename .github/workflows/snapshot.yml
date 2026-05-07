@@ -1,0 +1,189 @@
+name: Snapshot Release
+
+# Every push to main creates a versioned prerelease GitHub Release with the
+# packaged VSIX and a source-code zip. Marketplace publishing is intentionally
+# omitted — these snapshots are install-via-VSIX only.
+#
+# Tag scheme: snapshot-v<pkgVersion>-build.<runNumber>-<sha7>
+# Example:    snapshot-v0.15.0-build.42-abc1234
+#
+# Manual runs (workflow_dispatch) are also supported.
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: snapshot-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build snapshot artifacts
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      vsix: ${{ steps.pack.outputs.vsix }}
+      sourcezip: ${{ steps.srczip.outputs.sourcezip }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Compute snapshot version
+        id: version
+        shell: bash
+        run: |
+          BASE="$(node -p "require('./package.json').version")"
+          SHA7="$(git rev-parse --short=7 HEAD)"
+          # Valid semver pre-release: 0.15.0-build.42-abc1234
+          VERSION="${BASE}-build.${{ github.run_number }}-${SHA7}"
+          TAG="snapshot-v${VERSION}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}"         >> "$GITHUB_OUTPUT"
+          echo "Snapshot version : ${VERSION}"
+          echo "Snapshot tag     : ${TAG}"
+
+      - name: Stamp package.json with snapshot version
+        shell: bash
+        env:
+          STAMP: ${{ steps.version.outputs.version }}
+        run: |
+          node -e "
+            const fs=require('fs');
+            const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+            pkg.version=process.env.STAMP;
+            if (pkg.symbolicversion!==undefined) pkg.symbolicversion=process.env.STAMP;
+            fs.writeFileSync('package.json', JSON.stringify(pkg,null,'\t')+'\n');
+          "
+          node -p "require('./package.json').version"
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Compile TypeScript
+        run: npx tsc -p ./
+
+      - name: Typecheck tests
+        run: npx tsc -p tsconfig.test.json --noEmit
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Install vsce
+        run: npm install --no-save @vscode/vsce
+
+      - name: Package extension (VSIX)
+        id: pack
+        shell: bash
+        run: |
+          OUT="galasa-plugin-${{ steps.version.outputs.version }}.vsix"
+          npx --yes @vscode/vsce package --pre-release --out "$OUT"
+          echo "vsix=$OUT" >> "$GITHUB_OUTPUT"
+          ls -lh "$OUT"
+
+      - name: Build source code zip
+        id: srczip
+        shell: bash
+        run: |
+          OUT="galasa-plugin-${{ steps.version.outputs.version }}-src.zip"
+          git archive --format=zip -o "$OUT" HEAD
+          echo "sourcezip=$OUT" >> "$GITHUB_OUTPUT"
+          ls -lh "$OUT"
+
+      - name: Compute checksums
+        shell: bash
+        run: |
+          VSIX="${{ steps.pack.outputs.vsix }}"
+          SRC="${{ steps.srczip.outputs.sourcezip }}"
+          sha256sum "$VSIX" "$SRC" > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: vsix-${{ steps.version.outputs.version }}
+          path: ${{ steps.pack.outputs.vsix }}
+          retention-days: 30
+
+      - name: Upload source zip artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: src-${{ steps.version.outputs.version }}
+          path: ${{ steps.srczip.outputs.sourcezip }}
+          retention-days: 30
+
+      - name: Upload checksums artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: checksums-${{ steps.version.outputs.version }}
+          path: SHA256SUMS.txt
+          retention-days: 30
+
+  release:
+    name: Publish snapshot GitHub Release (no marketplace)
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: write
+    steps:
+      - name: Download VSIX
+        uses: actions/download-artifact@v8
+        with:
+          name: vsix-${{ needs.build.outputs.version }}
+          path: dist/
+
+      - name: Download source zip
+        uses: actions/download-artifact@v8
+        with:
+          name: src-${{ needs.build.outputs.version }}
+          path: dist/
+
+      - name: Download checksums
+        uses: actions/download-artifact@v8
+        with:
+          name: checksums-${{ needs.build.outputs.version }}
+          path: dist/
+
+      - name: List release assets
+        shell: bash
+        run: ls -lh dist/
+
+      - name: Generate release notes
+        shell: bash
+        run: |
+          {
+            echo "## galasa-plugin snapshot ${{ needs.build.outputs.tag }}"
+            echo ""
+            echo "Automated snapshot build from commit \`${{ github.sha }}\` on \`${{ github.ref_name }}\`."
+            echo ""
+            echo "### Assets"
+            for f in dist/*; do
+              echo "- \`$(basename "$f")\`"
+            done
+            echo ""
+            echo "_Snapshot builds are **not** published to the VS Code Marketplace or Open VSX. Install via the VSIX above._"
+          } > RELEASE_NOTES.md
+
+      - name: Create snapshot GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.build.outputs.tag }}
+          name: galasa-plugin snapshot ${{ needs.build.outputs.tag }}
+          body_path: RELEASE_NOTES.md
+          prerelease: true
+          files: |
+            dist/*.vsix
+            dist/*-src.zip
+            dist/SHA256SUMS.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

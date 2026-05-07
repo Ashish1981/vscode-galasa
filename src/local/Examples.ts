@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import * as fs from 'fs';
 import * as path from 'path';
 import * as unzipper from "unzipper";
-import * as rimraf from "rimraf";
+import { rimrafSync } from "rimraf";
 import { detectJava, getRequiredVmArgs, isVersionSupported, MAX_SUPPORTED_JAVA, MIN_SUPPORTED_JAVA } from "../utils/JavaVersion";
 
 interface ExampleConfig {
@@ -167,7 +167,7 @@ async function generateExampleCode(packageName : string, context : vscode.Extens
                             fs.existsSync(path.join(watcherWorkpath as string, packageName + "." + s))
                         );
                         if(allCreated) {
-                            rimraf(path.join(watcherWorkpath, "examples"), () => {});
+                            try { rimrafSync(path.join(watcherWorkpath, "examples")); } catch { /* ignore */ }
                             watcher.dispose();
                         }
                     }
@@ -175,9 +175,9 @@ async function generateExampleCode(packageName : string, context : vscode.Extens
                     vscode.window.showErrorMessage("Error loading example tests, please verify the configured archive and try again.");
                     if(watcherWorkpath) {
                         config.targetSubdirectories.forEach(s => {
-                            rimraf(path.join(watcherWorkpath as string, packageName + "." + s), () => {});
+                            try { rimrafSync(path.join(watcherWorkpath as string, packageName + "." + s)); } catch { /* ignore */ }
                         });
-                        rimraf(path.join(watcherWorkpath, "examples"), () => {});
+                        try { rimrafSync(path.join(watcherWorkpath, "examples")); } catch { /* ignore */ }
                     }
                 } finally {
                     if(javaExt) {

@@ -15,16 +15,6 @@ on:
         required: false
         type: boolean
         default: false
-      publish_marketplace:
-        description: 'Publish to VS Code Marketplace (requires VSCE_PAT secret)'
-        required: false
-        type: boolean
-        default: false
-      publish_open_vsx:
-        description: 'Publish to Open VSX (requires OVSX_PAT secret)'
-        required: false
-        type: boolean
-        default: false
 
 permissions:
   contents: write
@@ -42,7 +32,7 @@ jobs:
       version: ${{ steps.tag.outputs.version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Determine tag and version
         id: tag
@@ -62,17 +52,18 @@ jobs:
           echo "Resolved tag=${TAG}, version=${VERSION}"
 
   build:
-    name: Build VSIX
+    name: Build VSIX + source zip
     runs-on: ubuntu-latest
     needs: resolve
     outputs:
       vsix: ${{ steps.pack.outputs.vsix }}
+      sourcezip: ${{ steps.srczip.outputs.sourcezip }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '24'
 
@@ -118,27 +109,71 @@ jobs:
           echo "vsix=$OUT" >> "$GITHUB_OUTPUT"
           ls -lh "$OUT"
 
+      - name: Build source code zip
+        id: srczip
+        shell: bash
+        run: |
+          OUT="galasa-plugin-${{ needs.resolve.outputs.version }}-src.zip"
+          # Reproducible zip from the committed tree only — excludes node_modules, out/, .git, etc.
+          git archive --format=zip -o "$OUT" HEAD
+          echo "sourcezip=$OUT" >> "$GITHUB_OUTPUT"
+          ls -lh "$OUT"
+
+      - name: Compute checksums
+        shell: bash
+        run: |
+          VSIX="${{ steps.pack.outputs.vsix }}"
+          SRC="${{ steps.srczip.outputs.sourcezip }}"
+          sha256sum "$VSIX" "$SRC" > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
       - name: Upload VSIX artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: vsix-${{ needs.resolve.outputs.version }}
           path: ${{ steps.pack.outputs.vsix }}
           retention-days: 90
 
+      - name: Upload source zip artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: src-${{ needs.resolve.outputs.version }}
+          path: ${{ steps.srczip.outputs.sourcezip }}
+          retention-days: 90
+
+      - name: Upload checksums artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: checksums-${{ needs.resolve.outputs.version }}
+          path: SHA256SUMS.txt
+          retention-days: 90
+
   release:
-    name: Publish GitHub Release
+    name: Publish GitHub Release (VSIX + source zip only — no marketplace publish)
     runs-on: ubuntu-latest
     needs: [resolve, build]
     permissions:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download VSIX
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: vsix-${{ needs.resolve.outputs.version }}
+          path: dist/
+
+      - name: Download source zip
+        uses: actions/download-artifact@v8
+        with:
+          name: src-${{ needs.resolve.outputs.version }}
+          path: dist/
+
+      - name: Download checksums
+        uses: actions/download-artifact@v8
+        with:
+          name: checksums-${{ needs.resolve.outputs.version }}
           path: dist/
 
       - name: Generate release notes
@@ -152,10 +187,17 @@ jobs:
               echo "See CHANGELOG.md for the full list of changes."
             fi
             echo ""
+            echo "### Assets"
+            echo "- \`galasa-plugin-${{ needs.resolve.outputs.version }}.vsix\` — installable VSIX"
+            echo "- \`galasa-plugin-${{ needs.resolve.outputs.version }}-src.zip\` — source-code archive (\`git archive HEAD\`)"
+            echo "- \`SHA256SUMS.txt\` — checksums for both"
+            echo ""
             echo "### Install"
-            echo "1. Download the .vsix asset below."
+            echo "1. Download \`galasa-plugin-${{ needs.resolve.outputs.version }}.vsix\` below."
             echo "2. In VS Code: Extensions panel → ⋮ → Install from VSIX..."
             echo "   Or run: \`code --install-extension galasa-plugin-${{ needs.resolve.outputs.version }}.vsix\`"
+            echo ""
+            echo "_This release is **not** published to the VS Code Marketplace or Open VSX. Install via the VSIX above._"
           } > RELEASE_NOTES.md
           echo "path=RELEASE_NOTES.md" >> "$GITHUB_OUTPUT"
 
@@ -168,69 +210,7 @@ jobs:
           prerelease: ${{ inputs.prerelease == true }}
           files: |
             dist/*.vsix
+            dist/*-src.zip
+            dist/SHA256SUMS.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  publish-marketplace:
-    name: Publish to VS Code Marketplace
-    runs-on: ubuntu-latest
-    needs: [resolve, build, release]
-    if: ${{ inputs.publish_marketplace == true }}
-    steps:
-      - name: Download VSIX
-        uses: actions/download-artifact@v4
-        with:
-          name: vsix-${{ needs.resolve.outputs.version }}
-          path: dist/
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-
-      - name: Install vsce
-        run: npm install --no-save @vscode/vsce
-
-      - name: Publish to Marketplace
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
-        shell: bash
-        run: |
-          if [ -z "${VSCE_PAT}" ]; then
-            echo "VSCE_PAT secret not configured; skipping Marketplace publish."
-            exit 0
-          fi
-          VSIX="$(ls dist/*.vsix | head -n 1)"
-          npx --yes @vscode/vsce publish --packagePath "$VSIX" --pat "$VSCE_PAT"
-
-  publish-open-vsx:
-    name: Publish to Open VSX
-    runs-on: ubuntu-latest
-    needs: [resolve, build, release]
-    if: ${{ inputs.publish_open_vsx == true }}
-    steps:
-      - name: Download VSIX
-        uses: actions/download-artifact@v4
-        with:
-          name: vsix-${{ needs.resolve.outputs.version }}
-          path: dist/
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-
-      - name: Install ovsx
-        run: npm install --no-save ovsx
-
-      - name: Publish to Open VSX
-        env:
-          OVSX_PAT: ${{ secrets.OVSX_PAT }}
-        shell: bash
-        run: |
-          if [ -z "${OVSX_PAT}" ]; then
-            echo "OVSX_PAT secret not configured; skipping Open VSX publish."
-            exit 0
-          fi
-          VSIX="$(ls dist/*.vsix | head -n 1)"
-          npx --yes ovsx publish "$VSIX" -p "$OVSX_PAT"
