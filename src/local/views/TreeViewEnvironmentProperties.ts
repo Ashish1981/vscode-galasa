@@ -61,7 +61,7 @@ export class EnvironmentProvider implements vscode.TreeDataProvider<GalasaEnviro
 
     public setEnvironment(envPath : string | undefined) {
         this.envPath = envPath;
-        fs.writeFileSync(this.configPath, envPath);
+        fs.writeFileSync(this.configPath, envPath ?? "");
         this.refresh();
     }
 
