@@ -682,7 +682,7 @@
 	],
 	"dependencies": {
 		"@types/unzipper": "^0.10.3",
-		"comment-json": "^3.0.2",
+		"comment-json": "^5.0.0",
 		"gulp": "^4.0.2",
 		"request": "^2.88.2",
 		"rimraf": "^6.1.3",
