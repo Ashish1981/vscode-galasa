@@ -694,7 +694,7 @@
 		"@types/node": "^25.6.0",
 		"@types/sinon": "^17.0.4",
 		"@types/vscode": "^1.45.1",
-		"chai": "^4.5.0",
+		"chai": "^6.2.2",
 		"glob": "^13.0.6",
 		"mocha": "^10.8.2",
 		"mocha-junit-reporter": "^2.2.1",
